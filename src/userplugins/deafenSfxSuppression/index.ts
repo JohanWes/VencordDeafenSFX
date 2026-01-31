@@ -37,7 +37,7 @@ const VOICE_SFX_PATTERNS = [
     /viewer_(join|leave)/i,
     /voice_disconnected/i,
     /invited_to_speak/i,
-    /activity_(start|end|user_join|user_leave)/i,
+    /activity_(launch|start|end|user_join|user_leave)/i,
 ];
 
 type PatchedFunction = {
@@ -284,6 +284,8 @@ function patchNotificationSettingsStore(store: Record<string, any>) {
             }
         }
         if (isActive && isSelfDeafened() && SelectedChannelStore?.getVoiceChannelId?.() && isVoiceChannelSfxSoundId(sound)) {
+            // Some voice SFX are played via hashed asset URLs; open a short window to catch those too.
+            triggerSuppressionWindow(`isSoundDisabled:${sound}`);
             return true;
         }
         return original.call(this, sound);
@@ -385,7 +387,8 @@ function patchFluxDispatch() {
                     type === "STREAM_STOP" ||
                     type === "STREAM_DELETE" ||
                     type === "RTC_CONNECTION_CLIENT_CONNECT" ||
-                    type === "RTC_CONNECTION_CLIENT_DISCONNECT"
+                    type === "RTC_CONNECTION_CLIENT_DISCONNECT" ||
+                    type.startsWith("ACTIVITY_")
                 ) {
                     triggerSuppressionWindow(type);
                 }
