@@ -4,11 +4,11 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import { definePluginSettings } from "@api/Settings";
+import { Logger } from "@utils/Logger";
+import definePlugin, { OptionType, StartAt } from "@utils/types";
 import { filters, findStore, fluxStores, waitFor } from "@webpack";
 import { FluxDispatcher, MediaEngineStore, SelectedChannelStore, VoiceStateStore } from "@webpack/common";
-import { Logger } from "@utils/Logger";
-import { definePluginSettings } from "@api/Settings";
-import definePlugin, { OptionType, StartAt } from "@utils/types";
 
 const logger = new Logger("DeafenSfxSuppression");
 
