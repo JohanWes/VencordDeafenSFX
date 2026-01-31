@@ -61,7 +61,7 @@ let originalHtmlMediaPlay: ((...args: any[]) => Promise<void>) | null = null;
 let originalAudioBufferStart: ((...args: any[]) => any) | null = null;
 let lastWebAudioLog = 0;
 const loggedOnce = new Set<string>();
-let originalFluxDispatch: ((payload: any) => any) | null = null;
+let originalFluxDispatch: ((...args: any[]) => any) | null = null;
 
 type VoiceStateChangeEvent = {
     channelId?: string;
@@ -95,7 +95,8 @@ function normalizeSoundId(soundId: string): string {
 
 function isSelfDeafened(): boolean {
     try {
-        if (typeof MediaEngineStore?.getSelfDeaf === "function") return Boolean(MediaEngineStore.getSelfDeaf());
+        const getSelfDeaf = (MediaEngineStore as any)?.getSelfDeaf;
+        if (typeof getSelfDeaf === "function") return Boolean(getSelfDeaf.call(MediaEngineStore));
     } catch {
         // ignore
     }
@@ -371,9 +372,8 @@ function patchFluxDispatch() {
     if (typeof FluxDispatcher?.dispatch !== "function") return;
 
     originalFluxDispatch = FluxDispatcher.dispatch;
-    FluxDispatcher.dispatch = function (...args: any[]) {
+    FluxDispatcher.dispatch = function (payload: any) {
         try {
-            const payload = args[0];
             const type = payload?.type;
 
             if (isActive && isSelfDeafened() && SelectedChannelStore?.getVoiceChannelId?.() && typeof type === "string") {
@@ -394,7 +394,7 @@ function patchFluxDispatch() {
             // ignore
         }
 
-        return originalFluxDispatch!.apply(this, args);
+        return originalFluxDispatch!.call(this, payload);
     };
 }
 
