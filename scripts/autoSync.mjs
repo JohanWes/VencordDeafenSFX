@@ -5,6 +5,7 @@
  */
 
 import { execFileSync } from "child_process";
+import { existsSync } from "fs";
 
 function runGit(args) {
     return execFileSync("git", args, { encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] }).trim();
@@ -22,6 +23,15 @@ function shouldSkip() {
     if (process.env.CI) return "CI=true";
     if ((process.env.VENCORD_AUTO_SYNC ?? "1") === "0") return "VENCORD_AUTO_SYNC=0";
     return null;
+}
+
+function tryAbortRebase() {
+    try {
+        execFileSync("git", ["rebase", "--abort"], { stdio: "ignore" });
+        return true;
+    } catch {
+        return false;
+    }
 }
 
 try {
@@ -50,8 +60,26 @@ try {
         process.exit(0);
     }
 
-    info("Pulling latest changes (ff-only)...");
-    execFileSync("git", ["pull", "--ff-only"], { stdio: "inherit" });
+    // Avoid making things worse if a rebase is already in progress.
+    try {
+        const rebaseMerge = runGit(["rev-parse", "--git-path", "rebase-merge"]);
+        const rebaseApply = runGit(["rev-parse", "--git-path", "rebase-apply"]);
+        if (existsSync(rebaseMerge) || existsSync(rebaseApply)) {
+            warn("Rebase appears to be in progress, skipping git pull");
+            process.exit(0);
+        }
+    } catch {
+        // ignore
+    }
+
+    info("Pulling latest changes (rebase)...");
+    try {
+        execFileSync("git", ["pull", "--rebase", "--autostash"], { stdio: "inherit" });
+    } catch (error) {
+        // If pull/rebase failed (e.g. conflicts), try to abort the rebase to avoid leaving the repo stuck.
+        tryAbortRebase();
+        throw error;
+    }
 } catch (error) {
     warn(`Git auto-sync failed, continuing build. (${String(error)})`);
 }
