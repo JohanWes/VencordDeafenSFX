@@ -32,8 +32,34 @@ jobs:
 
             - name: Merge upstream
               run: |
+                  set -euo pipefail
                   git checkout main
-                  git merge --no-edit upstream/main
+                  cp -f README.md /tmp/README.md.ours 2>/dev/null || true
+
+                  if git merge --no-edit upstream/main; then
+                      :
+                  else
+                      if git diff --name-only --diff-filter=U | grep -qx "README.md"; then
+                          git checkout --ours README.md
+                          git add README.md
+                      fi
+
+                      if [[ -n "$(git diff --name-only --diff-filter=U)" ]]; then
+                          echo "Unresolved conflicts:"
+                          git diff --name-only --diff-filter=U
+                          exit 1
+                      fi
+
+                      git commit --no-edit
+                  fi
+
+                  if [[ -f /tmp/README.md.ours ]]; then
+                      cp -f /tmp/README.md.ours README.md
+                      if ! git diff --quiet -- README.md; then
+                          git add README.md
+                          git commit -m "Keep fork README"
+                      fi
+                  fi
 
             - name: Push
               run: git push origin main
