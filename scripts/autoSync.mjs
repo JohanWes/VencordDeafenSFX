@@ -25,6 +25,26 @@ function shouldSkip() {
     return null;
 }
 
+function isGitOperationInProgress() {
+    try {
+        const rebaseMerge = runGit(["rev-parse", "--git-path", "rebase-merge"]);
+        const rebaseApply = runGit(["rev-parse", "--git-path", "rebase-apply"]);
+        const mergeHead = runGit(["rev-parse", "--git-path", "MERGE_HEAD"]);
+        const cherryPickHead = runGit(["rev-parse", "--git-path", "CHERRY_PICK_HEAD"]);
+        const revertHead = runGit(["rev-parse", "--git-path", "REVERT_HEAD"]);
+
+        return (
+            existsSync(rebaseMerge) ||
+            existsSync(rebaseApply) ||
+            existsSync(mergeHead) ||
+            existsSync(cherryPickHead) ||
+            existsSync(revertHead)
+        );
+    } catch {
+        return false;
+    }
+}
+
 function tryAbortRebase() {
     try {
         execFileSync("git", ["rebase", "--abort"], { stdio: "ignore" });
@@ -60,16 +80,10 @@ try {
         process.exit(0);
     }
 
-    // Avoid making things worse if a rebase is already in progress.
-    try {
-        const rebaseMerge = runGit(["rev-parse", "--git-path", "rebase-merge"]);
-        const rebaseApply = runGit(["rev-parse", "--git-path", "rebase-apply"]);
-        if (existsSync(rebaseMerge) || existsSync(rebaseApply)) {
-            warn("Rebase appears to be in progress, skipping git pull");
-            process.exit(0);
-        }
-    } catch {
-        // ignore
+    // Avoid making things worse if a git operation is already in progress.
+    if (isGitOperationInProgress()) {
+        warn("Git operation in progress (merge/rebase/cherry-pick/revert), skipping git pull");
+        process.exit(0);
     }
 
     info("Pulling latest changes (rebase)...");
