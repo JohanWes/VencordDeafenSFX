@@ -8,6 +8,7 @@ Suppress voice-channel join/leave/stream SFX while **self-deafened** (headphone 
    - from: `deafenSfxSuppression/`
    - to:   `Vencord/src/userplugins/deafenSfxSuppression/`
 3) Build + inject:
+   - `pnpm install`
    - `pnpm build`
    - `pnpm inject`
 4) Enable the plugin in Vencord Settings → Plugins.
