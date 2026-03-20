@@ -6,7 +6,6 @@ on:
 
 permissions:
     contents: write
-    workflows: write
 
 concurrency:
     group: sync-upstream
@@ -36,6 +35,8 @@ jobs:
                   set -euo pipefail
                   git checkout main
                   cp -f README.md /tmp/README.md.ours 2>/dev/null || true
+                  mkdir -p /tmp/fork-workflows
+                  cp -a .github/workflows/. /tmp/fork-workflows/ 2>/dev/null || true
 
                   if git merge --no-edit upstream/main; then
                       :
@@ -59,6 +60,16 @@ jobs:
                       if ! git diff --quiet -- README.md; then
                           git add README.md
                           git commit -m "Keep fork README"
+                      fi
+                  fi
+
+                  if [[ -d /tmp/fork-workflows ]]; then
+                      rm -rf .github/workflows
+                      mkdir -p .github/workflows
+                      cp -a /tmp/fork-workflows/. .github/workflows/
+                      if ! git diff --quiet -- .github/workflows; then
+                          git add .github/workflows
+                          git commit -m "Keep fork workflows"
                       fi
                   fi
 
